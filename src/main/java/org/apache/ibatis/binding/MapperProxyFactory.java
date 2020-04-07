@@ -49,6 +49,9 @@ public class MapperProxyFactory<T> {
   }
 
   public T newInstance(SqlSession sqlSession) {
+    /*
+    MapperProxy 这个是InvocationHandle 的实现类，其实重点调用的就i是 它的invoke 方法。
+     */
     final MapperProxy<T> mapperProxy = new MapperProxy<>(sqlSession, mapperInterface, methodCache);
     return newInstance(mapperProxy);
   }

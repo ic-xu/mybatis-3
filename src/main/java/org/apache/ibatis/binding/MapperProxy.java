@@ -76,9 +76,20 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     lookupConstructor = lookup;
   }
 
+  /**
+   *  MapperProxy在执行时会触发此方法，这里是执行 sql的方法
+   * @param proxy 代理的对象
+   * @param method 代理接口的方法
+   * @param args 参数
+   * @return 返回sql 执行的结果
+   * @throws Throwable 异常信息
+   */
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      /*
+      如果调用的是Object 的方法，那么不执行代理，直接返回原有的方法
+       */
       if (Object.class.equals(method.getDeclaringClass())) {
         return method.invoke(this, args);
       } else {
