@@ -17,7 +17,6 @@ package org.apache.ibatis;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -87,7 +86,6 @@ public abstract class BaseDataTest {
     DataSource ds = createUnpooledDataSource(JPETSTORE_PROPERTIES);
     runScript(ds, JPETSTORE_DDL);
     runScript(ds, JPETSTORE_DATA);
-    Proxy.newProxyInstance()
     return ds;
   }
 }

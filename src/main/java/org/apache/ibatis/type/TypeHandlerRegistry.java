@@ -49,6 +49,7 @@ import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * 管理所有的 TypeHandler 对象，决定什么时候该用哪一个对象。
  * @author Clinton Begin
  * @author Kazuki Shimizu
  */
@@ -330,7 +331,12 @@ public final class TypeHandlerRegistry {
   //
 
   // Only handler
-
+  /**
+   * MappedTypes 表示能够处理 Java 类型的集合
+   * @param typeHandler
+   * @param typeHandler
+   * @param <T>
+   */
   @SuppressWarnings("unchecked")
   public <T> void register(TypeHandler<T> typeHandler) {
     boolean mappedTypeFound = false;
@@ -362,6 +368,12 @@ public final class TypeHandlerRegistry {
     register((Type) javaType, typeHandler);
   }
 
+  /**
+   * MappedJdbcTypes 表示能够处理jdbc 类型的集合
+   * @param javaType
+   * @param typeHandler
+   * @param <T>
+   */
   private <T> void register(Type javaType, TypeHandler<? extends T> typeHandler) {
     MappedJdbcTypes mappedJdbcTypes = typeHandler.getClass().getAnnotation(MappedJdbcTypes.class);
     if (mappedJdbcTypes != null) {
@@ -380,14 +392,17 @@ public final class TypeHandlerRegistry {
     register(javaTypeReference.getRawType(), handler);
   }
 
-  // java type + jdbc type + handler
 
-  // Cast is required here
   @SuppressWarnings("cast")
   public <T> void register(Class<T> type, JdbcType jdbcType, TypeHandler<? extends T> handler) {
     register((Type) type, jdbcType, handler);
   }
 
+  /**
+   * 最主要的注册方法，其他方法最终都会调用到这里，它的参数为：
+   * java type + jdbc type + handler（类型转换器）
+   Cast is required here
+   */
   private void register(Type javaType, JdbcType jdbcType, TypeHandler<?> handler) {
     if (javaType != null) {
       Map<JdbcType, TypeHandler<?>> map = typeHandlerMap.get(javaType);
@@ -459,7 +474,11 @@ public final class TypeHandlerRegistry {
   }
 
   // scan
-
+  /**
+   * 这个方法负责扫描整个报下的 TypeHandler 接口集合
+   *
+   * @param packageName
+   */
   public void register(String packageName) {
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<>();
     resolverUtil.find(new ResolverUtil.IsA(TypeHandler.class), packageName);

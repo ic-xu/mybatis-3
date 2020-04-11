@@ -21,15 +21,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
+ * 单个参数的类型转换。其实现类是各种基本类型对应jdbc类型的转换
+ * ，那什么时候该用那个类性的转换器，这需要 TypeHandlerRegistry 来实现
  * @author Clinton Begin
  */
 public interface TypeHandler<T> {
 
+  //设置参数
   void setParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
 
   /**
    * Gets the result.
-   *
+   *获取结果集
    * @param rs
    *          the rs
    * @param columnName

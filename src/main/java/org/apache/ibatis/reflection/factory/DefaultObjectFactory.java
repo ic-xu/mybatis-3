@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2019 the original author or authors.
+ *    Copyright 2009-2020 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -33,7 +33,37 @@ import java.util.stream.Collectors;
 import org.apache.ibatis.reflection.ReflectionException;
 import org.apache.ibatis.reflection.Reflector;
 
+
 /**
+ * MyBatis uses an ObjectFactory to create all needed new Objects.
+ *
+ * 每次 MyBatis 创建结果对象的新实例时，
+ * 它都会使用一个对象工厂（ObjectFactory）实例来完成实例化工作。
+ * 默认的对象工厂需要做的仅仅是实例化目标类，要么通过默认无参构造方法，
+ * 要么通过存在的参数映射来调用带有参数的构造方法。 如果想覆盖对象工厂的默认行为，
+ * 可以通过创建自己的对象工厂来实现。比如：
+ *
+ * // ExampleObjectFactory.java
+ *
+ * public class ExampleObjectFactory extends DefaultObjectFactory {
+ *   public Object create(Class type) {
+ *     return super.create(type);
+ *   }
+ *   public Object create(Class type, List<Class> constructorArgTypes, List<Object> constructorArgs) {
+ *     return super.create(type, constructorArgTypes, constructorArgs);
+ *   }
+ *   public void setProperties(Properties properties) {
+ *     super.setProperties(properties);
+ *   }
+ *   public <T> boolean isCollection(Class<T> type) {
+ *     return Collection.class.isAssignableFrom(type);
+ *   }}
+ *
+ *<!- mybatis-config.xml -->
+ * <objectFactory type="org.mybatis.example.ExampleObjectFactory">
+ *   <property name="someProperty" value="100"/>
+ * </objectFactory>
+ *
  * @author Clinton Begin
  */
 public class DefaultObjectFactory implements ObjectFactory, Serializable {
@@ -82,9 +112,9 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
       }
     } catch (Exception e) {
       String argTypes = Optional.ofNullable(constructorArgTypes).orElseGet(Collections::emptyList)
-          .stream().map(Class::getSimpleName).collect(Collectors.joining(","));
+        .stream().map(Class::getSimpleName).collect(Collectors.joining(","));
       String argValues = Optional.ofNullable(constructorArgs).orElseGet(Collections::emptyList)
-          .stream().map(String::valueOf).collect(Collectors.joining(","));
+        .stream().map(String::valueOf).collect(Collectors.joining(","));
       throw new ReflectionException("Error instantiating " + type + " with invalid types (" + argTypes + ") or values (" + argValues + "). Cause: " + e, e);
     }
   }

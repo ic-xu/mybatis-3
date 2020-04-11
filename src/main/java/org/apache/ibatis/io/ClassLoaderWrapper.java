@@ -20,6 +20,11 @@ import java.net.URL;
 
 /**
  * A class to wrap access to multiple class loaders making them work as one
+ * 对类加载器的封装，类加载器主要用来加载类，通过不同的类加载器实现资源的隔离，
+ * 比如tomcat中会为每一应用创建唯一的类加载器，所以tomcat中的应用不会相互影响
+ * 这里是对类加载器的一个封装。
+ *
+ * ClassLoaderWrapper 它的作用就是按照指定的加载顺序为为系统选择一个合适的类加载器
  *
  * @author Clinton Begin
  */

@@ -100,29 +100,67 @@ public class XMLConfigBuilder extends BaseBuilder {
     return configuration;
   }
 
+  /**
+   * 实际上就是解析主配置文件中的各个节点，
+   * 然后保存在Configuration当中，
+   * 然后使用Configuration创建出一个DefaultSqlsessionFactory对象，至此过程结束：
+   * @param root
+   */
   private void parseConfiguration(XNode root) {
     try {
-      // issue #117 read properties first
-      propertiesElement(root.evalNode("properties"));
+      /**解析配置文件中的各种属性*/
+      propertiesElement(root.evalNode("properties`"));
+      /**解析mybatis的全局设置信息*/
       Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfs(settings);
       loadCustomLogImpl(settings);
+      /**解析别名配置*/
       typeAliasesElement(root.evalNode("typeAliases"));
+      /**解析插件配置*/
       pluginElement(root.evalNode("plugins"));
+      /**解析自定义的对象工厂*/
       objectFactoryElement(root.evalNode("objectFactory"));
+      /**解析对象包装工厂*/
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
       reflectorFactoryElement(root.evalNode("reflectorFactory"));
       settingsElement(settings);
       // read it after objectFactory and objectWrapperFactory issue #631
+      /**解析mybatis的环境配置*/
       environmentsElement(root.evalNode("environments"));
+      /**解析数据库厂商标示*/
       databaseIdProviderElement(root.evalNode("databaseIdProvider"));
+      /**解析类型处理器配置信息*/
       typeHandlerElement(root.evalNode("typeHandlers"));
+      /**解析mapper配置信息*/
       mapperElement(root.evalNode("mappers"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
     }
   }
 
+  /**
+   * 解析全局的配置，配置属性如下：
+   * <settings>
+   *   <setting name="cacheEnabled" value="true"/>
+   *   <setting name="lazyLoadingEnabled" value="true"/>
+   *   <setting name="multipleResultSetsEnabled" value="true"/>
+   *   <setting name="useColumnLabel" value="true"/>
+   *   <setting name="useGeneratedKeys" value="false"/>
+   *   <setting name="autoMappingBehavior" value="PARTIAL"/>
+   *   <setting name="autoMappingUnknownColumnBehavior" value="WARNING"/>
+   *   <setting name="defaultExecutorType" value="SIMPLE"/>
+   *   <setting name="defaultStatementTimeout" value="25"/>
+   *   <setting name="defaultFetchSize" value="100"/>
+   *   <setting name="safeRowBoundsEnabled" value="false"/>
+   *   <setting name="mapUnderscoreToCamelCase" value="false"/>
+   *   <setting name="localCacheScope" value="SESSION"/>
+   *   <setting name="jdbcTypeForNull" value="OTHER"/>
+   *   <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+   * </settings>
+   *
+   * @param context
+   * @return
+   */
   private Properties settingsAsProperties(XNode context) {
     if (context == null) {
       return new Properties();
@@ -145,7 +183,7 @@ public class XMLConfigBuilder extends BaseBuilder {
       for (String clazz : clazzes) {
         if (!clazz.isEmpty()) {
           @SuppressWarnings("unchecked")
-          Class<? extends VFS> vfsImpl = (Class<? extends VFS>)Resources.classForName(clazz);
+          Class<? extends VFS> vfsImpl = (Class<? extends VFS>) Resources.classForName(clazz);
           configuration.setVfsImpl(vfsImpl);
         }
       }
@@ -157,6 +195,31 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setLogImpl(logImpl);
   }
 
+  /**
+   * 解析别名配置，别名有如下几种格式，这里主要解析的是前两种
+   *  第一种：
+   *  <typeAliases>
+   *   <typeAlias alias="Author" type="domain.blog.Author"/>
+   *   <typeAlias alias="Blog" type="domain.blog.Blog"/>
+   *   <typeAlias alias="Comment" type="domain.blog.Comment"/>
+   *   <typeAlias alias="Post" type="domain.blog.Post"/>
+   *   <typeAlias alias="Section" type="domain.blog.Section"/>
+   *   <typeAlias alias="Tag" type="domain.blog.Tag"/>
+   * </typeAliases>
+   *
+   * 第二种：配置包方式
+   * <typeAliases>
+   *   <package name="domain.blog"/>
+   * </typeAliases>
+   *
+   *  第三种：注解方式
+   * @Alias("author")
+   * public class Author {
+   *     ...
+   * }
+   *
+   * @param parent
+   */
   private void typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
@@ -181,18 +244,57 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析mybatis中的插件。
+   * 实际上就是通过interceptor标签，解析出拦截器类，
+   * 然后将其实例化并保存到Configuration类中的InterceptorChain中，以备后用
+   *
+   * MyBatis 允许你在映射语句执行过程中的某一点进行拦截调用。默认情况下，MyBatis 允许使用插件来拦截的方法调用包括：
+   * Executor (update, query, flushStatements, commit, rollback, getTransaction, close, isClosed)
+   * ParameterHandler (getParameterObject, setParameters)
+   * ResultSetHandler (handleResultSets, handleOutputParameters)
+   * StatementHandler (prepare, parameterize, batch, update, query)
+   * 这些类中方法的细节可以通过查看每个方法的签名来发现，或者直接查看 MyBatis 发行包中的源代码。
+   * 如果你想做的不仅仅是监控方法的调用，那么你最好相当了解要重写的方法的行为。
+   * 因为在试图修改或重写已有方法的行为时，很可能会破坏 MyBatis 的核心模块。
+   * 这些都是更底层的类和方法，所以使用插件的时候要特别当心。
+   *
+   * 插件在xml中的格式为：
+   * <!- mybatis-config.xml -->
+   * <plugins>
+   *   <plugin interceptor="org.mybatis.example.ExamplePlugin">
+   *     <property name="someProperty" value="100"/>
+   *   </plugin>
+   * </plugins>
+   *
+   * @param parent 节点对象
+   * @throws Exception 异常信息
+   */
   private void pluginElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         String interceptor = child.getStringAttribute("interceptor");
         Properties properties = child.getChildrenAsProperties();
+        /**实例化拦截器类*/
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).getDeclaredConstructor().newInstance();
         interceptorInstance.setProperties(properties);
+        /**将实例化的拦截器类放到configuration中的interceptorChain中*/
         configuration.addInterceptor(interceptorInstance);
       }
     }
   }
 
+  /**
+   * 解析自定义对象工厂类，在mxl中自定义的工厂类定义如下：
+   *
+   * <!- mybatis-config.xml -->
+   * <objectFactory type="org.mybatis.example.ExampleObjectFactory">
+   *   <property name="someProperty" value="100"/>
+   * </objectFactory>
+   *
+   * @param context
+   * @throws Exception
+   */
   private void objectFactoryElement(XNode context) throws Exception {
     if (context != null) {
       String type = context.getStringAttribute("type");
@@ -270,6 +372,49 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setConfigurationFactory(resolveClass(props.getProperty("configurationFactory")));
   }
 
+  /**
+   * MyBatis 可以配置成适应多种环境，这种机制有助于将 SQL 映射应用于多种数据库之中， 现实情况下有多种理由需要这么做。
+   * 例如，开发、测试和生产环境需要有不同的配置；或者想在具有相同 Schema 的多个生产数据库中使用相同的 SQL 映射。
+   * 还有许多类似的使用场景。
+   * 不过要记住：尽管可以配置多个环境，但每个 SqlSessionFactory 实例只能选择一种环境。
+   * 所以，如果你想连接两个数据库，就需要创建两个 SqlSessionFactory 实例，每个数据库对应一个。
+   * 而如果是三个数据库，就需要三个实例，依此类推，记起来很简单：
+   *
+   * environments 元素定义了如何配置环境。
+   * <environments default="development">
+   *   <environment id="development">
+   *     <transactionManager type="JDBC">
+   *       <property name="..." value="..."/>
+   *     </transactionManager>
+   *     或者：
+   *   <transactionManager type="MANAGED">
+   *     <property name="closeConnection" value="false"/>
+   *   </transactionManager>
+   *     这里写出两种形式的事物管理器：===>>>
+   *     JDBC – 这个配置直接使用了 JDBC 的提交和回滚设施，它依赖从数据源获得的连接来管理事务作用域。
+   *     MANAGED – 这个配置几乎没做什么。它从不提交或回滚一个连接，
+   *      而是让容器来管理事务的整个生命周期（比如 JEE 应用服务器的上下文）。
+   *      默认情况下它会关闭连接。然而一些容器并不希望连接被关闭，
+   *      因此需要将 closeConnection 属性设置为 false 来阻止默认的关闭行为
+   *    如果你正在使用 Spring + MyBatis，则没有必要配置事务管理器，因为 Spring 模块会使用自带的管理器来覆盖前面的配置。
+   *
+   *    这两种事务管理器类型都不需要设置任何属性。
+   *    它们其实是类型别名，换句话说，你可以用 TransactionFactory 接口实现类的全限定名或类型别名代替它们。
+   *
+   *     <dataSource type="POOLED">
+   *       <property name="driver" value="${driver}"/>
+   *       <property name="url" value="${url}"/>
+   *       <property name="username" value="${username}"/>
+   *       <property name="password" value="${password}"/>
+   *     </dataSource>
+   *
+   *     大多数 MyBatis 应用程序会按示例中的例子来配置数据源。虽然数据源配置是可选的，但如果要启用延迟加载特性，就必须配置数据源。
+   *   </environment>
+   * </environments>
+   *
+   * @param context
+   * @throws Exception
+   */
   private void environmentsElement(XNode context) throws Exception {
     if (context != null) {
       if (environment == null) {
@@ -282,14 +427,31 @@ public class XMLConfigBuilder extends BaseBuilder {
           DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
           DataSource dataSource = dsFactory.getDataSource();
           Environment.Builder environmentBuilder = new Environment.Builder(id)
-              .transactionFactory(txFactory)
-              .dataSource(dataSource);
+            .transactionFactory(txFactory)
+            .dataSource(dataSource);
           configuration.setEnvironment(environmentBuilder.build());
         }
       }
     }
   }
 
+  /**
+   * MyBatis 可以根据不同的数据库厂商执行不同的语句，这种多厂商的支持是基于映射语句中的 databaseId 属性。
+   * MyBatis 会加载带有匹配当前数据库 databaseId 属性和所有不带 databaseId 属性的语句。
+   * 如果同时找到带有 databaseId 和不带 databaseId 的相同语句，则后者会被舍弃。
+   * 为支持多厂商特性，只要像下面这样在 mybatis-config.xml 文件中加入 databaseIdProvider 即可：
+   * <databaseIdProvider type="DB_VENDOR" />
+   * databaseIdProvider 对应的 DB_VENDOR 实现会将 databaseId 设置为 DatabaseMetaData#getDatabaseProductName() 返回的字符串。
+   * 由于通常情况下这些字符串都非常长，而且相同产品的不同版本会返回不同的值，你可能想通过设置属性别名来使其变短：
+   * <databaseIdProvider type="DB_VENDOR">
+   *   <property name="SQL Server" value="sqlserver"/>
+   *   <property name="DB2" value="db2"/>
+   *   <property name="Oracle" value="oracle" />
+   * </databaseIdProvider>
+   *
+   * @param context
+   * @throws Exception
+   */
   private void databaseIdProviderElement(XNode context) throws Exception {
     DatabaseIdProvider databaseIdProvider = null;
     if (context != null) {
@@ -358,13 +520,47 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * mappers的扫描与解析,我们先来看一下mappers标签里面是什么,主要有下面两个子标签
+   * <!- 使用相对于类路径的资源引用 -->
+   * <mappers>
+   *   <mapper resource="org/mybatis/builder/AuthorMapper.xml"/>
+   *   <mapper resource="org/mybatis/builder/BlogMapper.xml"/>
+   *   <mapper resource="org/mybatis/builder/PostMapper.xml"/>
+   * </mappers>
+   *
+   * <!- 使用完全限定资源定位符（URL） -->
+   * <mappers>
+   *   <mapper url="file:///var/mappers/AuthorMapper.xml"/>
+   *   <mapper url="file:///var/mappers/BlogMapper.xml"/>
+   *   <mapper url="file:///var/mappers/PostMapper.xml"/>
+   * </mappers>
+   *
+   * <!-使用映射器接口实现类的完全限定类名 -->
+   * <mappers>
+   *   <mapper class="org.mybatis.builder.AuthorMapper"/>
+   *   <mapper class="org.mybatis.builder.BlogMapper"/>
+   *   <mapper class="org.mybatis.builder.PostMapper"/>
+   * </mappers>
+   *
+   * <!- 将包内的映射器接口实现全部注册为映射器 -->
+   * <mappers>
+   *   <package name="org.mybatis.builder"/>
+   * </mappers>
+   *
+   *
+   * @param parent
+   * @throws Exception
+   */
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        /**如果子节点是配置的package，那么进行包自动扫描处理*/
         if ("package".equals(child.getName())) {
           String mapperPackage = child.getStringAttribute("name");
           configuration.addMappers(mapperPackage);
         } else {
+          /**如果子节点配置的是resource、url、mapperClass，本文我们使用的是resource*/
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
           String mapperClass = child.getStringAttribute("class");

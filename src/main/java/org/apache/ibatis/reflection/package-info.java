@@ -12,6 +12,8 @@
  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
+ *
+ *    反射工具箱，用于处理大量的放射操作
  */
 /**
  * Reflection utils.

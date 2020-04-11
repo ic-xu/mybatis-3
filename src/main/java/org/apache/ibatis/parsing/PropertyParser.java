@@ -18,6 +18,9 @@ package org.apache.ibatis.parsing;
 import java.util.Properties;
 
 /**
+ * 处理占位符的解析器，它会在parser()方法中创建一个 GenericTokenParer 解析器，
+ * 然后把相应的功能委托给GenericTokenParer.parser()方法处理
+ *
  * @author Clinton Begin
  * @author Kazuki Shimizu
  */
