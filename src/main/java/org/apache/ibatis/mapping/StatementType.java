@@ -16,6 +16,8 @@
 package org.apache.ibatis.mapping;
 
 /**
+ *
+ * 三种不同的statementHandle类型,对应三种不同的SQL参数绑定和执行过程.
  * @author Clinton Begin
  */
 public enum StatementType {

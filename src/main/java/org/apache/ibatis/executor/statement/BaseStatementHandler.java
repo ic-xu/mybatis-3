@@ -34,6 +34,11 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * BaseStatementHandler 是一个实现了 StatementHandler 接口的抽象类,它只提供了 一些参数
+ * 绑定相关的方法 ,并没有实现操作数据库的方法。
+ *
+ * BaseStatementHandler 依赖两个 重要 的组件,它们分别是 ParameterHandler 和 ResultSetHandler
+ *
  * @author Clinton Begin
  */
 public abstract class BaseStatementHandler implements StatementHandler {
@@ -41,11 +46,19 @@ public abstract class BaseStatementHandler implements StatementHandler {
   protected final Configuration configuration;
   protected final ObjectFactory objectFactory;
   protected final TypeHandlerRegistry typeHandlerRegistry;
+
+  // 记录使用的 ResultSetHandler 对象, 丘如前文所述,它的主要功能是将 结采集映射成结采对象
   protected final ResultSetHandler resultSetHandler;
+
+  /**记录使用的 ParameterHandler 对象, ParameterHandler 的主要功能是为 SQL 语 句绑定实 参 ,也就是
+      使用传入的实参替换 SQL t吾句的中’ ? ”占 位符,*/
   protected final ParameterHandler parameterHandler;
 
   protected final Executor executor;
+  // 记录 SQL t吾句对应的 MappedStatement 和 BoundSql 对象
   protected final MappedStatement mappedStatement;
+
+ // RowBounds 记录了用户设置的 offset 和 lim工 t ,用于在结采集中定位映射的起始位置和结束位置
   protected final RowBounds rowBounds;
 
   protected BoundSql boundSql;
@@ -60,6 +73,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
     this.objectFactory = configuration.getObjectFactory();
 
     if (boundSql == null) { // issue #435, get the key before calculating the statement
+      //调用 KeyGenerator . processBefore ()方法获取主键
       generateKeys(parameterObject);
       boundSql = mappedStatement.getBoundSql(parameterObject);
     }
@@ -135,6 +149,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
     }
   }
 
+  // 下面是 generateKeys ()方法的实现:
   protected void generateKeys(Object parameter) {
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     ErrorContext.instance().store();

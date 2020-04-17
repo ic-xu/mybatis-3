@@ -33,6 +33,10 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
+ * SimpleStatementHandler 继承了 BaseStatementHandler 抽象类。它底层使用 java. sql. Statement
+ * 对象来完成数据库的相关操作 , 所以 SQL 语句中不能存在占位符,也就不存在参数绑定,
+ * 相应的,SimpleStatementHand ler. parameterize()方法是空实现
+ *
  * @author Clinton Begin
  */
 public class SimpleStatementHandler extends BaseStatementHandler {
@@ -41,19 +45,28 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     super(executor, mappedStatement, parameter, rowBounds, resultHandler, boundSql);
   }
 
+  /**
+   * 法负责执行 insert、 update 或 de lete 等类型的 SQL 语句,并且会根据配置的 KeyGenerator 获取数据库生成的主键 , 具体实现如下 :
+   */
   @Override
   public int update(Statement statement) throws SQLException {
     String sql = boundSql.getSql();
     Object parameterObject = boundSql.getParameterObject();
+    //获取配置的 KeyGenerator 对象
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     int rows;
     if (keyGenerator instanceof Jdbc3KeyGenerator) {
+      // 执行 SQL 语句
       statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
+      // 获取受影响的行数
       rows = statement.getUpdateCount();
+      //将数据库生成的主键添加到 parameterObject 中
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
     } else if (keyGenerator instanceof SelectKeyGenerator) {
       statement.execute(sql);
       rows = statement.getUpdateCount();
+
+      // 执行< selectKey > 节点中配置的 SQL 语句获取数据库生成的主键,并添加到 parameter Object 中
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
     } else {
       statement.execute(sql);
@@ -68,6 +81,9 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     statement.addBatch(sql);
   }
 
+  /**
+   * 完成了数据库查询的操作,并通过 ResultSetHandler 将结果集映射成结果对象。
+   */
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     String sql = boundSql.getSql();
@@ -75,6 +91,9 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     return resultSetHandler.handleResultSets(statement);
   }
 
+  /**
+  queryCursor() 、 batch()方法与 query()方法实现类似,也是直接调用 Statement 对象的相应方法
+   */
   @Override
   public <E> Cursor<E> queryCursor(Statement statement) throws SQLException {
     String sql = boundSql.getSql();
@@ -82,8 +101,12 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     return resultSetHandler.handleCursorResultSets(statement);
   }
 
+  /**
+   * 直接通过 JDBC Connection 创建 Statement对象
+   */
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
+    // 判断结果集类型对应不同的创建方式
     if (mappedStatement.getResultSetType() == ResultSetType.DEFAULT) {
       return connection.createStatement();
     } else {

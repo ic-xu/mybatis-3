@@ -36,6 +36,12 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
 /**
+ * 在 BatchExecutor 实现 (具体实现后面详细介绍)中,可以缓存多条 SQL 语句,等待合适
+ * 的时机将缓存的多条 SQL 语句 一 并发送到数据库执行 。 Executor且ushStatements()方法主要是针
+ * 对批处理多条 SQL 语句的,它会调用 doFlushStatements()这个基本方法处理 Executor 中 缓存的
+ * 多条 SQL 语句。在 BaseExecutor.commit()、 rollback()等方法中都会首先调用 flushStatements()
+ * 方法 ,然后再执行相关事务操作
+ *
  * @author Jeff Butler
  */
 public class BatchExecutor extends BaseExecutor {
@@ -85,10 +91,14 @@ public class BatchExecutor extends BaseExecutor {
     try {
       flushStatements();
       Configuration configuration = ms.getConfiguration();
+      /**StatementHandler 四大对象之一，主要用来预编译，设置参数，并执行拦截器插件*/
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameterObject, rowBounds, resultHandler, boundSql);
       Connection connection = getConnection(ms.getStatementLog());
+      /**构造　Statement　*/
       stmt = handler.prepare(connection, transaction.getTimeout());
+      /**参数预编译*/
       handler.parameterize(stmt);
+
       return handler.query(stmt, resultHandler);
     } finally {
       closeStatement(stmt);

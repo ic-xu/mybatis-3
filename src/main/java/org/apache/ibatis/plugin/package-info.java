@@ -15,5 +15,10 @@
  */
 /**
  * Base package for handing plugins.
+ *
+ *  插件机制：使用插件为目标对象(四大对象)创建一个代理对象，可以拦截到对象的所有方法，这就是插件的机制原理
+ *  插件的编写：
+ *
+ *
  */
 package org.apache.ibatis.plugin;

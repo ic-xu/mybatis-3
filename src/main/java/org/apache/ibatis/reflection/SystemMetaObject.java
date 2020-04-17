@@ -36,6 +36,7 @@ public final class SystemMetaObject {
   private static class NullObject {
   }
 
+  /**拿到object 对象中的各种惨数的元数据信息*/
   public static MetaObject forObject(Object object) {
     return MetaObject.forObject(object, DEFAULT_OBJECT_FACTORY, DEFAULT_OBJECT_WRAPPER_FACTORY, new DefaultReflectorFactory());
   }

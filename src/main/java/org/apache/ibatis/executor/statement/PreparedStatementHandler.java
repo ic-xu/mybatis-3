@@ -33,6 +33,7 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
+ * PreparedStatementHandler 底层依赖于 java.sq1.PreparedStatement 对 象来完成数据库的相关操作
  * @author Clinton Begin
  */
 public class PreparedStatementHandler extends BaseStatementHandler {
@@ -89,6 +90,7 @@ public class PreparedStatementHandler extends BaseStatementHandler {
     }
   }
 
+  /**完成SQL参数的绑定*/
   @Override
   public void parameterize(Statement statement) throws SQLException {
     parameterHandler.setParameters((PreparedStatement) statement);

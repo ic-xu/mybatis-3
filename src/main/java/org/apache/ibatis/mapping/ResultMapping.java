@@ -15,18 +15,19 @@
  */
 package org.apache.ibatis.mapping;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 /**
  * @author Clinton Begin
+ * 每个ResultMapping 对 象记录了结果集中的一列与 JavaBean 中 一个属性之间的映射关系
  */
 public class ResultMapping {
 
@@ -36,6 +37,11 @@ public class ResultMapping {
   private Class<?> javaType;
   private JdbcType jdbcType;
   private TypeHandler<?> typeHandler;
+  /*
+   * 对应节点的 resultMap 属性,该属性通过 id ~I 用了另一个< resultMap >节点定义 ,它负 责将结采集中的一部
+   * 分列映射成其他关联的结果对象 。 这样我们就可以通过 j oin 方式进行关联查询,然后直接映射成多个对象,
+   * 并同时设置这些对象之间的组合关系
+   */
   private String nestedResultMapId;
   private String nestedQueryId;
   private Set<String> notNullColumns;

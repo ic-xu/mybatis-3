@@ -29,7 +29,9 @@ import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * 代表一个增删改查标签的详细信息,sql放在　SqlSource　中
  * @author Clinton Begin
+ *
  */
 public final class MappedStatement {
 

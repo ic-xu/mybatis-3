@@ -22,12 +22,14 @@ import java.util.Properties;
  */
 public interface Interceptor {
 
+  /**拦截方法的执行，invocation.proceed() 放行，有一个返回值*/
   Object intercept(Invocation invocation) throws Throwable;
 
+  /**包装目标对象的，为目标对象创建代理对象，可以使用Plugin.wrap(target,this)可以快速创建一个代理对象，返回的是代理后的对象*/
   default Object plugin(Object target) {
     return Plugin.wrap(target, this);
   }
-
+  /**将插件注册时properties属性注册进来*/
   default void setProperties(Properties properties) {
     // NOP
   }

@@ -28,6 +28,8 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapper;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
+ * 类的元数据值
+ *
  * @author Clinton Begin
  */
 public class MetaObject {
@@ -109,6 +111,7 @@ public class MetaObject {
     return objectWrapper.hasGetter(name);
   }
 
+  /**获取哪一个属性的值*/
   public Object getValue(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
     if (prop.hasNext()) {

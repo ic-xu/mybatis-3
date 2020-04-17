@@ -15,6 +15,9 @@
  */
 package org.apache.ibatis.binding;
 
+import org.apache.ibatis.reflection.ExceptionUtil;
+import org.apache.ibatis.session.SqlSession;
+
 import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -25,9 +28,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
-
-import org.apache.ibatis.reflection.ExceptionUtil;
-import org.apache.ibatis.session.SqlSession;
+import java.util.function.Function;
 
 /**
  * @author Clinton Begin
@@ -36,8 +37,8 @@ import org.apache.ibatis.session.SqlSession;
 public class MapperProxy<T> implements InvocationHandler, Serializable {
 
   private static final long serialVersionUID = -4724728412955527868L;
-  private static final int ALLOWED_MODES = MethodHandles.Lookup.PRIVATE | MethodHandles.Lookup.PROTECTED
-      | MethodHandles.Lookup.PACKAGE | MethodHandles.Lookup.PUBLIC;
+  private static final int ALLOWED_MODES = Lookup.PRIVATE | Lookup.PROTECTED
+      | Lookup.PACKAGE | Lookup.PUBLIC;
   private static final Constructor<Lookup> lookupConstructor;
   private static final Method privateLookupInMethod;
   private final SqlSession sqlSession;
@@ -53,7 +54,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
   static {
     Method privateLookupIn;
     try {
-      privateLookupIn = MethodHandles.class.getMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
+      privateLookupIn = MethodHandles.class.getMethod("privateLookupIn", Class.class, Lookup.class);
     } catch (NoSuchMethodException e) {
       privateLookupIn = null;
     }
@@ -63,7 +64,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     if (privateLookupInMethod == null) {
       // JDK 1.8
       try {
-        lookup = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+        lookup = Lookup.class.getDeclaredConstructor(Class.class, int.class);
         lookup.setAccessible(true);
       } catch (NoSuchMethodException e) {
         throw new IllegalStateException(
@@ -76,9 +77,18 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     lookupConstructor = lookup;
   }
 
+  /**
+   *  MapperProxy在执行时会触发此方法，这里是执行 sql的方法
+   * @param proxy 代理的对象
+   * @param method 代理接口的方法
+   * @param args 参数
+   * @return 返回sql 执行的结果
+   * @throws Throwable 异常信息
+   */
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      /** 如果调用的是Object 的方法，那么不执行代理，直接返回原有的方法  */
       if (Object.class.equals(method.getDeclaringClass())) {
         return method.invoke(this, args);
       } else {
@@ -91,6 +101,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
 
   private MapperMethodInvoker cachedInvoker(Method method) throws Throwable {
     try {
+      /**其中的method 是method对象*/
       return methodCache.computeIfAbsent(method, m -> {
         if (m.isDefault()) {
           try {
@@ -104,6 +115,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
             throw new RuntimeException(e);
           }
         } else {
+          /** 会走这里　*/
           return new PlainMethodInvoker(new MapperMethod(mapperInterface, method, sqlSession.getConfiguration()));
         }
       });

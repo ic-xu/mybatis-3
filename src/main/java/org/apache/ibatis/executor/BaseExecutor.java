@@ -1,17 +1,17 @@
 /**
- *    Copyright 2009-2020 the original author or authors.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Copyright 2009-2020 the original author or authors.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.ibatis.executor;
 
@@ -45,21 +45,36 @@ import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * BaseExecutor 是一个实现了 Executor 接口的抽象类 ,它 实现了 Executor 接口的大部分方法, 其中就使用了模板方法模式。
+ * BaseExecutor 中主要提供了缓存管理和事务管理的基本功能,继承 BaseExecutor 的子类只要实现四个基本方法来完成数据库的相关操作即可,
+ * 这四个方法分别是 : doUpdate()方法、 doQue可()方法、 doQueryCursor()方法、 doFlushStatement()方法,
+ * 其余的功能在 BaseExecutor 中 实现。
+ *
  * @author Clinton Begin
  */
 public abstract class BaseExecutor implements Executor {
 
   private static final Log log = LogFactory.getLog(BaseExecutor.class);
-
+  //II Transaction 对象,实现事务的提交、 回 j哀和关闭操作
   protected Transaction transaction;
+
+  //封装的 Executor 对象
   protected Executor wrapper;
 
+  //延迟加载队列,
   protected ConcurrentLinkedQueue<DeferredLoad> deferredLoads;
+
+  // 一级缓存,用于缓存该 Executor 对象查询结果集映射得到的结采对象
   protected PerpetualCache localCache;
+
+  // 一级缓存 ,用于缓存输出类型的参数
   protected PerpetualCache localOutputParameterCache;
+
   protected Configuration configuration;
 
+  //用来记录嵌套查询的层敛
   protected int queryStack;
+
   private boolean closed;
 
   protected BaseExecutor(Configuration configuration, Transaction transaction) {
@@ -131,6 +146,7 @@ public abstract class BaseExecutor implements Executor {
 
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
+    /**获取绑定的SQL，BoundSql　代表SQL语句的详细信息，参数信息等*/
     BoundSql boundSql = ms.getBoundSql(parameter);
     CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
     return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
@@ -143,22 +159,34 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 非嵌套查询,并且< select >节点配置的 flushCache 属性为 true 时,才会清空一级缓存
+    // flushCache 配置项是影响一级缓存中结采对象存活 时长的第一个方面
     if (queryStack == 0 && ms.isFlushCacheRequired()) {
       clearLocalCache();
     }
     List<E> list;
     try {
+      //II 培加查询层数
       queryStack++;
+      //查询一级缓存
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
       if (list != null) {
+        //针对存储过程调用的处理 , 其功能是 : 在一级缓存命中时,获取缓存中保存的输出类型参数,并设豆到用户传入的实参( parameter )对象中
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
       } else {
+        //其中会调用子类中的doQuery ()方法完成数据库查询,并得到映射后的结采对象,放入缓存中,doQuery ()方法是
+        //一个抽象方法,也是上述 4 个基本方法之一,由 BaseExecutor 的子类具体实现
         list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
       }
     } finally {
+      //查询层数减一
       queryStack--;
     }
     if (queryStack == 0) {
+      /**
+       * 在最外层的查询结束时,所有嵌套查询也已 经完成,相关缓存项也已经完全加载,
+       * 所以在这里可以触发 DeferredLoad 加载 一级缓存中记录的嵌套查询的结采对象
+       * */
       for (DeferredLoad deferredLoad : deferredLoads) {
         deferredLoad.load();
       }
@@ -172,6 +200,12 @@ public abstract class BaseExecutor implements Executor {
     return list;
   }
 
+  /**
+   * BaseExecutor.queryCursor()方法的主要功能也是查询数据库,这一点与 query()方法类似,但
+   * 它不会直接将结果集映射为结果对象 ,而是将结果集封装成 Cursor 对并返回,待用户遍历 Cursor
+   * 时才真正完成结果集的映射操作。另 外, queryCursor O方法是直接调用 doQueryCursor()这个基
+   * 本方法实现的,并不会像 query()方法那样使用查询一级缓存。 queryCursor ()方法的代码比较简单
+   */
   @Override
   public <E> Cursor<E> queryCursor(MappedStatement ms, Object parameter, RowBounds rowBounds) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameter);
@@ -191,19 +225,24 @@ public abstract class BaseExecutor implements Executor {
     }
   }
 
+  /**
+   * 该 CacheKey 对象由 MappedStatement 的 id 、对应的 offset 和 limit、 SQL
+   * 语句(包含“?”占位符)、用户传递的实参以及 Environment 的 id 这五部分构成
+   */
   @Override
   public CacheKey createCacheKey(MappedStatement ms, Object parameterObject, RowBounds rowBounds, BoundSql boundSql) {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
     CacheKey cacheKey = new CacheKey();
-    cacheKey.update(ms.getId());
-    cacheKey.update(rowBounds.getOffset());
+    cacheKey.update(ms.getId());//将 MappedStatement 的 id 添加到 Cache Key 对象 中
+    cacheKey.update(rowBounds.getOffset());//sql分页信息
     cacheKey.update(rowBounds.getLimit());
-    cacheKey.update(boundSql.getSql());
+    cacheKey.update(boundSql.getSql());//将 SQL 语句添加到 CacheKey 对象中
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     TypeHandlerRegistry typeHandlerRegistry = ms.getConfiguration().getTypeHandlerRegistry();
     // mimic DefaultParameterHandler logic
+    //获取用户传入的实参,并添加 .f1J CacheKey 对象中
     for (ParameterMapping parameterMapping : parameterMappings) {
       if (parameterMapping.getMode() != ParameterMode.OUT) {
         Object value;
@@ -218,11 +257,13 @@ public abstract class BaseExecutor implements Executor {
           MetaObject metaObject = configuration.newMetaObject(parameterObject);
           value = metaObject.getValue(propertyName);
         }
+        //II 将实参添加到 CacheKey 对象中
         cacheKey.update(value);
       }
     }
     if (configuration.getEnvironment() != null) {
       // issue #176
+      //如果 Environment 的 id 不为空,则将其添加 到 CacheKey 中
       cacheKey.update(configuration.getEnvironment().getId());
     }
     return cacheKey;
@@ -239,12 +280,18 @@ public abstract class BaseExecutor implements Executor {
       throw new ExecutorException("Cannot commit, transaction is already closed");
     }
     clearLocalCache();
-    flushStatements();
+    flushStatements();// 执行缓存的 SQL 语句,其中调用了 flushStatements(false )方法
     if (required) {
       transaction.commit();
     }
   }
 
+  /**
+   * BaseExecutor.rol lback()方法的实现与 commit()实现类似, 同样会根据参数决定是否真正回
+   * 滚事务 ,区别是其中调用的是 flushStatements()方法的 isRollBack 参数为 true , 这就会导致
+   * Executor 中缓存的 SQL 语句全部被忽略(不会被发送到数据库执行) , 感兴趣的读者请参考源
+   * 码。
+   * */
   @Override
   public void rollback(boolean required) throws SQLException {
     if (!closed) {
@@ -272,10 +319,10 @@ public abstract class BaseExecutor implements Executor {
   protected abstract List<BatchResult> doFlushStatements(boolean isRollback) throws SQLException;
 
   protected abstract <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)
-      throws SQLException;
+    throws SQLException;
 
   protected abstract <E> Cursor<E> doQueryCursor(MappedStatement ms, Object parameter, RowBounds rowBounds, BoundSql boundSql)
-      throws SQLException;
+    throws SQLException;
 
   protected void closeStatement(Statement statement) {
     if (statement != null) {
@@ -290,12 +337,10 @@ public abstract class BaseExecutor implements Executor {
   /**
    * Apply a transaction timeout.
    *
-   * @param statement
-   *          a current statement
-   * @throws SQLException
-   *           if a database access error occurs, this method is called on a closed <code>Statement</code>
-   * @since 3.4.0
+   * @param statement a current statement
+   * @throws SQLException if a database access error occurs, this method is called on a closed <code>Statement</code>
    * @see StatementUtil#applyTransactionTimeout(Statement, Integer, Integer)
+   * @since 3.4.0
    */
   protected void applyTransactionTimeout(Statement statement) throws SQLException {
     StatementUtil.applyTransactionTimeout(statement, statement.getQueryTimeout(), transaction.getTimeout());
@@ -318,6 +363,9 @@ public abstract class BaseExecutor implements Executor {
     }
   }
 
+  /**
+   * 查询结果并把结果添加到缓存中
+   */
   private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException {
     List<E> list;
     localCache.putObject(key, EXECUTION_PLACEHOLDER);
@@ -342,6 +390,13 @@ public abstract class BaseExecutor implements Executor {
     }
   }
 
+  /**
+   * 负责从 localCache 缓存中延迟加载结果对象
+   * 也就是缓存结查询得到的结果对象 。除此
+   * 之外,一级缓存还有第二个功能 :前面在分析嵌套查询时,如果一级缓存中缓存了嵌套查询的
+   * 结果对象 ,则可以从一级缓存中直接加载该结果对象:如果一级缓存中 记录的嵌套查询的结果
+   * 对象并未完全加载,则可以通过 DeferredLoad 实现类似延迟加载的功能。
+   */
   @Override
   public void setExecutorWrapper(Executor wrapper) {
     this.wrapper = wrapper;
@@ -373,14 +428,23 @@ public abstract class BaseExecutor implements Executor {
       this.targetType = targetType;
     }
 
+    /**
+     * DeferredLoad .canLoad()方法负责检测缓存项是否已经完全加载到了缓存中。首先要说明 “ 完
+     * 全加载”的含义 : BaseExecutor.叩ieryFromDatabase()方法中 , 开始查询调用 doQuery()方法查询
+     * 数据库之前,会先在 local Cache 中添加占位符 , 待查询完成 之后 , 才将真正 的 结果对象放 到
+     * local Cache 中缓存, 此时该缓存项才算“完全加载 ”
+     */
     public boolean canLoad() {
       return localCache.getObject(key) != null && localCache.getObject(key) != EXECUTION_PLACEHOLDER;
     }
 
+    /**
+     * 方法负责从缓存中加载结果对象,并设置到外层对象的相应属性中
+     */
     public void load() {
       @SuppressWarnings("unchecked")
       // we suppose we get back a List
-      List<Object> list = (List<Object>) localCache.getObject(key);
+        List<Object> list = (List<Object>) localCache.getObject(key);
       Object value = resultExtractor.extractObjectFromList(list, targetType);
       resultObject.setValue(property, value);
     }

@@ -241,6 +241,10 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return new Discriminator.Builder(configuration, resultMapping, namespaceDiscriminatorMap).build();
   }
 
+  /**
+   * 这里会根据传入的参数对象构造出一个MappedStatement 对象并把该对象放入到全局的配置文件中
+   * 一个mappedStatement　就代表一个增删改查标签。
+   */
   public MappedStatement addMappedStatement(
       String id,
       SqlSource sqlSource,
@@ -294,6 +298,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     }
 
     MappedStatement statement = statementBuilder.build();
+    /**　把mappedStatement 对象放入到全局的配置文件中　*/
     configuration.addMappedStatement(statement);
     return statement;
   }

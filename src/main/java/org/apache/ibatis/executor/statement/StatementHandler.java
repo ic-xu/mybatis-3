@@ -27,21 +27,33 @@ import org.apache.ibatis.session.ResultHandler;
 
 /**
  * @author Clinton Begin
+ *
+ * StatementHandler 接口中的功能很多,
+ *
+ *  例如创建 Statement 对象,为 SQL 语句绑定实参,执
+ * 行 select、 insert 、 update 、 delete 等多种类型的 SQL 语句,批量执行 SQL 语句,将结果集映射
+ * 成结果对象。
+ *
  */
 public interface StatementHandler {
 
+  //从连接中获取一个statement
   Statement prepare(Connection connection, Integer transactionTimeout)
       throws SQLException;
 
+  //绑定statement执行时需要的实参
   void parameterize(Statement statement)
       throws SQLException;
 
+  //批量执行SQL
   void batch(Statement statement)
       throws SQLException;
 
+  //执行update/insert/delete SQL 语句
   int update(Statement statement)
       throws SQLException;
 
+  //执行查询SQL语句
   <E> List<E> query(Statement statement, ResultHandler resultHandler)
       throws SQLException;
 
@@ -50,6 +62,7 @@ public interface StatementHandler {
 
   BoundSql getBoundSql();
 
+  //获取其中封装的ParameterHandle
   ParameterHandler getParameterHandler();
 
 }
