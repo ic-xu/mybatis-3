@@ -22,6 +22,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.ResultSet;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,11 +57,19 @@ import org.apache.ibatis.session.Configuration;
 public final class TypeHandlerRegistry {
 
   //EnumMap 原理就是利用枚举的原始下标当做数组的下标，然后把值存入相应下标的位置
+  // 记录 JdbcType 与 TypeHandler 之间的对应关系
   private final Map<JdbcType, TypeHandler<?>>  jdbcTypeHandlerMap = new EnumMap<>(JdbcType.class);
+  // 记录了 Java 类型向指定 JdbcType 转换时,需妥使用的 Type Handler
+  //转换成数据库 的 char 、 varchar 等多种类 型,所以存在一对多关系
   private final Map<Type, Map<JdbcType, TypeHandler<?>>> typeHandlerMap = new ConcurrentHashMap<>();
+
+  //未知的类型转换
   private final TypeHandler<Object> unknownTypeHandler;
+
+  // 记录了全部 TypeHandler 的类型以及该类型相应的 T ypeHandler 对象
   private final Map<Class<?>, TypeHandler<?>> allTypeHandlersMap = new HashMap<>();
 
+  // 空 TypeHandler 集合的标识
   private static final Map<JdbcType, TypeHandler<?>> NULL_TYPE_HANDLER_MAP = Collections.emptyMap();
 
   private Class<? extends TypeHandler> defaultEnumTypeHandler = EnumTypeHandler.class;
