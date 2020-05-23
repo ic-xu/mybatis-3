@@ -112,7 +112,8 @@ public class XMLStatementBuilder extends BaseBuilder {
     String keyColumn = context.getStringAttribute("keyColumn");
     String resultSets = context.getStringAttribute("resultSets");
 
-    /** 解析完成之后，把解析出来的结果放入到　builderAssistant中 */
+    /** 解析完成之后，把解析出来的结果放入到　builderAssistant中,
+     而builderAssistant 中则把sql封装成mapperStatement 对象存入configuration的一个map中，使用的时候直接在map中获取 */
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
         fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
         resultSetTypeEnum, flushCache, useCache, resultOrdered,

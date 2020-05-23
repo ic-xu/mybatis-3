@@ -138,6 +138,7 @@ public class MapperAnnotationBuilder {
           parseResultMap(method);
         }
         try {
+          /** 解析注解sql */
           parseStatement(method);
         } catch (IncompleteElementException e) {
           configuration.addIncompleteMethod(new MethodResolver(this, method));
@@ -148,7 +149,7 @@ public class MapperAnnotationBuilder {
   }
 
   private boolean canHaveStatement(Method method) {
-    // issue #237
+    // issue #237,bridge
     return !method.isBridge() && !method.isDefault();
   }
 
@@ -302,9 +303,16 @@ public class MapperAnnotationBuilder {
     return null;
   }
 
+  /**
+   * 解析statement
+   * @param method
+   */
   void parseStatement(Method method) {
+    /**  获取参数类型 */
     Class<?> parameterTypeClass = getParameterType(method);
     LanguageDriver languageDriver = getLanguageDriver(method);
+
+    /** boundSql 用来获取/绑定sql*/
     SqlSource sqlSource = getSqlSourceFromAnnotations(method, parameterTypeClass, languageDriver);
     if (sqlSource != null) {
       Options options = method.getAnnotation(Options.class);

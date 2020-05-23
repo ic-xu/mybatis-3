@@ -99,8 +99,13 @@ public abstract class BaseStatementHandler implements StatementHandler {
     ErrorContext.instance().sql(boundSql.getSql());
     Statement statement = null;
     try {
+      /** 获取statement */
       statement = instantiateStatement(connection);
+
+      /** 设置超时时间*/
       setStatementTimeout(statement, transactionTimeout);
+
+      /** 设置从数据库获取数据的行数**/
       setFetchSize(statement);
       return statement;
     } catch (SQLException e) {
@@ -130,6 +135,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
   protected void setFetchSize(Statement stmt) throws SQLException {
     Integer fetchSize = mappedStatement.getFetchSize();
     if (fetchSize != null) {
+      /** 设置从数据库获取数据的行数**/
       stmt.setFetchSize(fetchSize);
       return;
     }
